@@ -22,37 +22,46 @@ Dedicated pipeline for 3D point cloud processing and cross-modal projection.
 
 ### 3. Camera Processing (`sensor-fusion/camera/`)
 Image-based perception pipeline for visual feature extraction.
-* **Semantic Segmentation:** Per-pixel class labeling using the A2D2 semantic label taxonomy (38 classes).
-* **Feature Extraction:** Extracts visual embeddings from RGB frames using pretrained CNN backbones for cross-modal association.
-* **Bounding Box Parsing:** Reads 2D ground truth annotations from A2D2 label files.
+* **Calibration Management:** Loads and applies camera intrinsic/extrinsic parameters for all 6 camera views.
+* **LiDAR Overlay:** Renders projected LiDAR depth maps onto camera images with colormap-based depth encoding.
+* **Semantic Label Parsing:** Reads A2D2 semantic bounding box annotations from JSON label files.
 
 ### 4. Sensor Fusion (`sensor-fusion/fusion/`)
 Core multi-modal alignment and fusion logic.
-* **Temporal Synchronization:** Aligns LiDAR, camera, and bus signal timestamps to build coherent multi-sensor frames.
-* **LiDAR-Camera Association:** Associates projected LiDAR points with semantic image labels for dense 3D scene annotation.
-* **3D Scene Reconstruction:** Builds fused 3D scene representations combining depth (LiDAR) and semantics (camera).
+* **Temporal Synchronization:** Aligns LiDAR, camera, and bus signal timestamps within a configurable tolerance window.
+* **LiDAR-Camera Association:** Associates projected 3D points with image pixels for dense depth-annotated frames.
+* **3D Scene Reconstruction:** Aggregates multi-frame point clouds into a unified 3D scene exportable as `.ply`.
 
 ---
 
 ## 🛠️ Tech Stack
 
 * **Core:** Python 3.10+, NumPy, Pandas.
-* **LiDAR:** Open3D (point cloud processing, visualization, voxel ops).
-* **Camera:** OpenCV (image processing, projection, annotation rendering).
-* **Visualization:** Matplotlib, Open3D visualizer.
-* **Data:** Audi A2D2 Dataset (LiDAR + Camera + Bus Signals splits).
+* **LiDAR:** Open3D (point cloud processing, voxel downsampling, visualization, `.ply` export).
+* **Camera:** OpenCV (image loading, undistortion, LiDAR overlay rendering).
+* **Data:** Audi A2D2 Dataset — Camera + LiDAR + Bus Signals splits.
 
 ---
 
 ## 📂 Project Structure
 
 ```text
-├── sensor-fusion/           # Core Python Processing Pipeline
-│   ├── ingestion/           # A2D2 data loading and parsing utilities
-│   ├── lidar/               # Point cloud processing and camera projection
-│   ├── camera/              # Image processing, segmentation, feature extraction
-│   └── fusion/              # Temporal sync, LiDAR-camera association, 3D fusion
-└── README.md
+├── sensor-fusion/
+│   ├── config.py                  # Percorsi dataset e parametri pipeline
+│   ├── main.py                    # Entry point della pipeline
+│   ├── ingestion/
+│   │   ├── a2d2_loader.py         # Caricamento LiDAR (.npz), camera (.png) e calibrazione
+│   │   └── bus_parser.py          # Parser segnali CAN bus veicolo
+│   ├── lidar/
+│   │   ├── point_cloud.py         # Filtraggio, downsampling e preprocessing point cloud
+│   │   └── projection.py          # Proiezione LiDAR → piano immagine camera
+│   ├── camera/
+│   │   ├── calibration.py         # Gestione calibrazione intrinseca/estrinseca
+│   │   └── image_processor.py     # Overlay LiDAR-camera e parsing annotazioni semantiche
+│   └── fusion/
+│       ├── fusion_engine.py       # Orchestratore principale della pipeline di fusione
+│       └── scene_builder.py       # Aggregazione multi-frame e ricostruzione scena 3D
+└── requirements.txt
 ```
 
 ---
