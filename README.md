@@ -1,68 +1,72 @@
-# Audi A2D2: Professional Sensor Fusion Pipeline 🚗📡
+# Audi A2D2: Sensor Fusion Pipeline 🚗📡
 
-This repository implements a **professional-grade sensor fusion pipeline** for the [Audi A2D2 Autonomous Driving Dataset](https://www.a2d2.audi). It integrates multi-modal perception data — **LiDAR point clouds**, **front/side cameras**, and **vehicle bus signals** — into a unified Python processing environment for autonomous driving research.
+Complete sensor fusion pipeline for autonomous driving using the **Audi A2D2 Dataset**. Compares three perception approaches — pure LiDAR, pure AI vision, and true multi-modal fusion — generating annotated output videos with Bird’s Eye View (BEV) mapping and performance analytics.
 
-The system processes, aligns, and semantically annotates raw A2D2 sensor frames for downstream tasks such as 3D object detection, lane segmentation, and scene understanding.
+Designed to run on both **Google Colab** (GPU, auto dataset mount) and **local machine** (NAS path via `config.txt`).
 
 ---
 
-## 🏗️ System Architecture
+## 🏗️ Pipeline Architecture
 
-### 1. Data Ingestion & Parsing (`sensor-fusion/ingestion/`)
-Handles raw A2D2 data loading and decoding across all sensor modalities.
-* **LiDAR:** Parses `.npz` point cloud files and extracts 3D coordinates, reflectance, and row/column indices.
-* **Camera:** Loads undistorted RGB frames from all 6 cameras (front, front-left, front-right, rear, rear-left, rear-right) with calibration matrices.
-* **Vehicle Bus Signals:** Decodes `bus_signals` JSON fields (speed, acceleration, steering angle) to contextualize sensor readings with vehicle dynamics.
+### Approach 1 — LiDAR Sensors Only (DBSCAN + Tracking + BEV)
+Pure LiDAR-based detection without any AI model.
+* **Clustering:** DBSCAN algorithm segments the point cloud into discrete objects.
+* **Tracking:** Hungarian algorithm maintains persistent object IDs across frames.
+* **BEV Map:** Bird’s Eye View overlay reconstructed from LiDAR projections.
+* **Output:** `Video1_PRO_Solo_Sensori.mp4`
 
-### 2. LiDAR Processing (`sensor-fusion/lidar/`)
-Dedicated pipeline for 3D point cloud processing and cross-modal projection.
-* **Ego-motion Correction:** Compensates for vehicle movement between LiDAR sweeps using IMU data.
-* **Camera Projection:** Projects 3D LiDAR points onto 2D camera image planes using intrinsic/extrinsic calibration matrices.
-* **Filtering & Downsampling:** Voxel grid downsampling and range-based filtering to reduce noise and computational load.
+### Approach 2 — YOLO Only (AI Detection + ByteTrack + BEV)
+Pure camera-based AI detection without LiDAR depth data.
+* **Detection:** YOLOv8 (medium) per-frame object detection.
+* **Tracking:** ByteTrack for persistent multi-object temporal tracking.
+* **BEV Map:** Estimated spatial positions derived from 2D bounding boxes.
+* **Output:** `Video2_PRO_YOLO_ByteTrack.mp4`
 
-### 3. Camera Processing (`sensor-fusion/camera/`)
-Image-based perception pipeline for visual feature extraction.
-* **Calibration Management:** Loads and applies camera intrinsic/extrinsic parameters for all 6 camera views.
-* **LiDAR Overlay:** Renders projected LiDAR depth maps onto camera images with colormap-based depth encoding.
-* **Semantic Label Parsing:** Reads A2D2 semantic bounding box annotations from JSON label files.
+### Approach 3 — True Sensor Fusion (YOLO + LiDAR)
+Multi-modal perception combining AI semantics with LiDAR spatial accuracy.
+* **Detection:** YOLO provides stable 2D bounding boxes and class labels.
+* **Depth:** LiDAR point cloud projected onto the camera frame for precise distance estimation.
+* **Validation:** LiDAR clusters validate and refine YOLO detections in 3D space.
+* **Output:** `Video3_PRO_Sensor_Fusion.mp4`
 
-### 4. Sensor Fusion (`sensor-fusion/fusion/`)
-Core multi-modal alignment and fusion logic.
-* **Temporal Synchronization:** Aligns LiDAR, camera, and bus signal timestamps within a configurable tolerance window.
-* **LiDAR-Camera Association:** Associates projected 3D points with image pixels for dense depth-annotated frames.
-* **3D Scene Reconstruction:** Aggregates multi-frame point clouds into a unified 3D scene exportable as `.ply`.
+### Comparative Analysis
+* Temporal evolution graphs for all three approaches.
+* Tracking stability and object count comparison.
+* LiDAR validation confidence metrics.
+* Processing time benchmarks per frame.
 
 ---
 
 ## 🛠️ Tech Stack
 
-* **Core:** Python 3.10+, NumPy, Pandas.
-* **LiDAR:** Open3D (point cloud processing, voxel downsampling, visualization, `.ply` export).
-* **Camera:** OpenCV (image loading, undistortion, LiDAR overlay rendering).
-* **Data:** Audi A2D2 Dataset — Camera + LiDAR + Bus Signals splits.
+* **Core:** Python 3.10+, Jupyter Notebook, NumPy, OpenCV.
+* **AI & Detection:** YOLOv8 (Ultralytics), ByteTrack, PyTorch.
+* **LiDAR Processing:** DBSCAN (scikit-learn), Hungarian algorithm (scipy).
+* **Visualization:** Matplotlib, tqdm.
+* **Infrastructure:** Google Colab (GPU), NAS local storage, Google Drive sync.
 
 ---
 
 ## 📂 Project Structure
 
 ```text
-├── sensor-fusion/
-│   ├── config.py                  # Percorsi dataset e parametri pipeline
-│   ├── main.py                    # Entry point della pipeline
-│   ├── ingestion/
-│   │   ├── a2d2_loader.py         # Caricamento LiDAR (.npz), camera (.png) e calibrazione
-│   │   └── bus_parser.py          # Parser segnali CAN bus veicolo
-│   ├── lidar/
-│   │   ├── point_cloud.py         # Filtraggio, downsampling e preprocessing point cloud
-│   │   └── projection.py          # Proiezione LiDAR → piano immagine camera
-│   ├── camera/
-│   │   ├── calibration.py         # Gestione calibrazione intrinseca/estrinseca
-│   │   └── image_processor.py     # Overlay LiDAR-camera e parsing annotazioni semantiche
-│   └── fusion/
-│       ├── fusion_engine.py       # Orchestratore principale della pipeline di fusione
-│       └── scene_builder.py       # Aggregazione multi-frame e ricostruzione scena 3D
-└── requirements.txt
+├── Audi_A2D2_Sensor_Fusion_Professional.ipynb   # Complete pipeline
+└── README.md
 ```
 
 ---
-*Engineered for professional autonomous driving research on the Audi A2D2 dataset.*
+
+## ⚙️ Setup
+
+**Local:**
+1. Ensure dataset at `YOUR_NAS_PATH\Progetto Audi A2D2` (or create `config.txt` with custom path)
+2. Run notebook cells sequentially
+
+**Google Colab:**
+1. Open notebook in Colab
+2. Mount Google Drive when prompted
+3. Add dataset folder shortcut to `MyDrive/Audi_A2D2_Data/`
+4. Run all cells
+
+---
+*Part of the Jarvis AI ecosystem for autonomous driving research.*
